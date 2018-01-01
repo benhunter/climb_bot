@@ -10,7 +10,6 @@
 # PythonAnywhere hourly command:
 #   workon climb_bot_venv && cd climb_bot/ && python climb_bot.py
 
-
 # Standard library
 import json
 import logging
@@ -40,40 +39,39 @@ else:
 
 def stop_bot(delete_lockfile=True, exit_code=0):
     logging.info('Shutting down')
-    if delete_lockfile and os.path.isfile(bot_running_file):
+    if delete_lockfile and sys.platform == 'win32' and os.path.isfile(bot_running_file):
         logging.debug('Deleting lock file')
         os.remove(bot_running_file)
     sys.exit(exit_code)
 
 
-def is_bot_running_win32():
-    if os.path.exists(bot_running_file):
-        os.remove(bot_running_file)
-        os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-        return True
+def is_bot_running():
+    if sys.platform == 'win32':
+        if os.path.exists(bot_running_file):
+            os.remove(bot_running_file)
+            os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            return True
+        else:
+            with open(bot_running_file, 'a'):
+                pass
+            return False
     else:
-        with open(bot_running_file, 'a'):
-            pass
-        return False
-
-
-def is_bot_running_UNIX():
-    """
-    Check if an instance of climb_bot is already running by creating a named socket. If the socket cannot be bound to
-    the lock name, then the bot is already running on the system
-    :return:
-    """
-    # Can't do any logging here because we haven't config'd the logger yet.
-    global lock_socket
-    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)  # AF_UNIX doesn't exist on Windows (ignore warning)
-    try:
-        lock_id = "infiniterecursive.climb_bot"
-        lock_socket.bind('\0' + lock_id)
-        # logging.debug("Acquired lock %r" % (lock_id,))
-        return False
-    except socket.error:
-        # logging.info("Failed to aquire lock %r" % (lock_id,))
-        return True
+        """
+        For UNIX/Linux systems, check if an instance of climb_bot is already running by creating a named socket.
+        If the socket cannot be bound to the lock name, then the bot is already running on the system.
+        """
+        # Can't do any logging here because we haven't config'd the logger yet.
+        global lock_socket
+        lock_socket = socket.socket(socket.AF_UNIX,
+                                    socket.SOCK_DGRAM)  # AF_UNIX doesn't exist on Windows (ignore warning)
+        try:
+            lock_id = "infiniterecursive.climb_bot"
+            lock_socket.bind('\0' + lock_id)
+            # logging.debug("Acquired lock %r" % (lock_id,))
+            return False
+        except socket.error:
+            # logging.info("Failed to aquire lock %r" % (lock_id,))
+            return True
 
 
 def init():
@@ -180,12 +178,8 @@ def main(reddit, subreddit):
 
 if __name__ == '__main__':
     try:
-        if sys.platform == 'win32':
-            if is_bot_running_win32():
-                raise Exception('climb_bot is already running!')
-        else:
-            if is_bot_running_UNIX():
-                raise Exception('climb_bot is already running!')
+        if is_bot_running():
+            raise Exception('climb_bot is already running!')
     except:
         print('climb_bot is already running!')
         print('Exiting...')
