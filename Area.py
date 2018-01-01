@@ -22,11 +22,11 @@ class Area:
 
 
 def findmparea(query):
-    '''
+    """
     Find the best match for an area on MountainProject.com based on the provided string.
     :param query: String with the query hopefully containing the name of the area.
     :return: Area object or None if no area was find.
-    '''
+    """
 
     searchlink = 'https://www.mountainproject.com/ajax/public/search/results/overview?q=' + urllib.parse.quote(query)
     name = ''

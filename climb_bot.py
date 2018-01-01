@@ -11,7 +11,6 @@
 #   workon climb_bot_venv && cd climb_bot/ && python climb_bot.py
 
 # Standard library
-import json
 import logging
 import os
 import re
@@ -24,10 +23,11 @@ import praw
 
 # Local imports
 from Area import findmparea
+from Config import Config
 from Route import findmproute
 
 lock_socket = None  # UNIX Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
-config = None  # store the JSON loaded from config file
+config = None  # store the Config loaded from JSON config file
 
 if sys.platform == 'win32':
     configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
@@ -47,14 +47,15 @@ def stop_bot(delete_lockfile=True, exit_code=0):
 
 def is_bot_running():
     if sys.platform == 'win32':
-        if os.path.exists(bot_running_file):
-            os.remove(bot_running_file)
-            os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            return True
-        else:
-            with open(bot_running_file, 'a'):
-                pass
-            return False
+        # TODO Using a file for a lock is not working.
+        # if os.path.exists(bot_running_file):
+        #     os.remove(bot_running_file)
+        #     os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+        #     return True
+        # else:
+        #     with open(bot_running_file, 'a'):
+        #         pass
+        return False
     else:
         """
         For UNIX/Linux systems, check if an instance of climb_bot is already running by creating a named socket.
@@ -93,38 +94,38 @@ def init():
 
     logging.info('Initializing...')
     logging.info('Loading config from: ' + configpath)
-    with open(configpath, 'r') as configfile:
-        config = json.load(configfile)
+    config = Config(configpath)
     logging.info('Config loaded')
 
     # TODO error handling for authentication
     logging.info('Authenticating to Reddit...')  # TODO don't think it actually auth's yet...
-    reddit = praw.Reddit(client_id=config['reddit.client_id'],
-                         client_secret=config['reddit.client_secret'],
-                         user_agent=config['reddit.user_agent'],
-                         username=config['reddit.username'],
-                         password=config['reddit.password'])
+    reddit_client = praw.Reddit(client_id=config.reddit_client_id,
+                                client_secret=config.reddit_client_secret,
+                                user_agent=config.reddit_user_agent,
+                                username=config.reddit_username,
+                                password=config.reddit_password)
 
     # TODO verify auth, write rights - how does PRAW do this, can we force auth now?
     # When offline, PRAW acts like it already auth'd
-    if reddit.read_only:
+    if reddit_client.read_only:
         logging.error('Authentication to Reddit is read-only.')
         raise Exception('Authentication to Reddit is read-only.')
     logging.info('Authentication successful.')  # TODO was it really though?
 
     logging.info('Initialization complete.')
-    return reddit
+    return reddit_client
 
 
-def main(reddit, subreddit):
-    '''
+def main(reddit_client, subreddit):
+    """
     Execute the logic of the bot. Run after init() is successful.
-    :param reddit: PRAW Reddit Object
+    :param reddit_client: PRAW Reddit Object
     :param subreddit: String name of the subreddit to check
     :return: Nothing
-    '''
-    logging.info('Getting ' + str(config['reddit.commentsPerCheck']) + ' comments from r/' + subreddit)
-    for comment in reddit.subreddit(subreddit).comments(limit=config['reddit.commentsPerCheck']):
+    """
+
+    logging.info('Getting ' + str(config.reddit_commentsPerCheck) + ' comments from r/' + subreddit)
+    for comment in reddit_client.subreddit(subreddit).comments(limit=config.reddit_commentsPerCheck):
         match = re.findall('(![Cc]limb|[Cc]limb:) (.*)', comment.body)  # gives a list of tuples (two groups in regex)
 
         if match:
@@ -132,8 +133,7 @@ def main(reddit, subreddit):
 
             query = match[0][1]  # take the first Tuple in the List, and the second regex group from the Tuple
 
-            file_obj_r = open(config['bot.commentpath'], 'r')  # with statement
-            with open(config['bot.commentpath'], 'r') as file_obj_r:
+            with open(config.bot_commentpath, 'r') as file_obj_r:
                 if comment.id not in file_obj_r.read().splitlines():
                     logging.info('Comment ID is unique: ' + comment.id)
                     logging.debug('vars(comment): ' + str(vars(comment)))
@@ -160,13 +160,13 @@ def main(reddit, subreddit):
                         current_route = findmproute(query)
                         if current_route is not None:
                             logging.info('Posting reply to comment: ' + comment.id)
-                            comment.reply(current_route.redditstr() + config['bot.footer'])
+                            comment.reply(current_route.redditstr() + config.bot_footer)
                             # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
                             logging.info('Reply posted to comment: ' + comment.id)
                             logging.info('Opening comment file to record comment: ' + comment.id)
 
                             # Note that file_obj_r is still open...
-                            with open(config['bot.commentpath'], 'a+') as file_obj_w:
+                            with open(config.bot_commentpath, 'a+') as file_obj_w:
                                 file_obj_w.write(comment.id + '\n')
                                 logging.info('Comment file updated with comment: ' + comment.id)
                         else:
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     try:
         if is_bot_running():
             raise Exception('climb_bot is already running!')
-    except:
+    except:  # TODO fix bare except statement
         print('climb_bot is already running!')
         print('Exiting...')
         stop_bot(delete_lockfile=True, exit_code=-1)
@@ -192,9 +192,9 @@ if __name__ == '__main__':
 
     count = 0
     while True:
-        for sub in config['bot.subreddits']:
+        for sub in config.bot_subreddits:
             main(reddit, sub)
 
         count += 1
-        logging.info('Loop count is: ' + str(count) + '. Sleeping ' + str(config['bot.sleep']) + ' seconds...')
-        time.sleep(config['bot.sleep'])
+        logging.info('Loop count is: ' + str(count) + '. Sleeping ' + str(config.bot_sleep) + ' seconds...')
+        time.sleep(config.bot_sleep)

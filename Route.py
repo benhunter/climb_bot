@@ -32,11 +32,11 @@ class Route:
 
 
 def findmproute(query):
-    '''
+    """
     Search MountainProject.com based on the provided string.
     :param query: String with the query hopefully containing name and location of a route.
     :return: Route object or None if no route was found.
-    '''
+    """
 
     searchlink = 'https://www.mountainproject.com/ajax/public/search/results/overview?q=' + urllib.parse.quote(query)
     # "https://www.mountainproject.com/search?q=" + urllib.parse.quote(query)
