@@ -56,6 +56,7 @@ class Route:
                 '](' + self.mpurl +
                 ') (Route on MountainProject.com)')
 
+
 class Area:
     name = ''
     mpurl = ''
@@ -133,7 +134,27 @@ def findmparea(query):
     else:
         return None
 
-def is_lock_free():
+# No longer needed.
+# def is_lock_free():
+#     # Can't do any logging here because we haven't config'd the logger yet.
+#     global lock_socket
+#     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+#     try:
+#         lock_id = "infiniterecursive.climb_bot"
+#         lock_socket.bind('\0' + lock_id)
+#         # logging.debug("Acquired lock %r" % (lock_id,))
+#         return True
+#     except socket.error:
+#         # logging.info("Failed to aquire lock %r" % (lock_id,))
+#         return False
+
+
+def is_bot_running():
+    """
+    Check if an instance of climb_bot is already running by creating a named socket. If the socket cannot be bound to
+    the lock name, then the bot is already running on the system
+    :return:
+    """
     # Can't do any logging here because we haven't config'd the logger yet.
     global lock_socket
     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
@@ -141,10 +162,10 @@ def is_lock_free():
         lock_id = "infiniterecursive.climb_bot"
         lock_socket.bind('\0' + lock_id)
         # logging.debug("Acquired lock %r" % (lock_id,))
-        return True
+        return False
     except socket.error:
         # logging.info("Failed to aquire lock %r" % (lock_id,))
-        return False
+        return True
 
 def init():
     global config  # JSON config files will be stored here
@@ -240,7 +261,7 @@ def main(reddit, subreddit):
 
 
 if __name__ == '__main__':
-    if not is_lock_free():
+    if is_bot_running():
         print('climb_bot is already running')
         print('exiting...')
         sys.exit()
