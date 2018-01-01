@@ -17,13 +17,13 @@ import re
 import socket
 import sys
 import time
-import urllib.parse
 
 import praw
-import requests
-from bs4 import BeautifulSoup
 
-lock_socket = None  # Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
+from Area import findmparea
+from Route import findmproute
+
+lock_socket = None  # UNIX Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
 
 configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
 # configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
@@ -31,125 +31,11 @@ configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSO
 config = None  # store the JSON loaded from config file
 
 
-class Route:
-    name = ''
-    grade = ''
-    description = ''
-    mpurl = ''
-
-    def __init__(self, name, grade, description, mpurl):
-        self.name = name
-        self.grade = grade
-        self.description = description
-        self.mpurl = mpurl
-
-    def __str__(self):
-        return ('Route\n\tName: ' + self.name +
-                '\n\tGrade: ' + self.grade +
-                '\n\tDescription: ' + self.description +
-                '\n\tURL: ' + self.mpurl)
-
-    def redditstr(self):
-        return ('[' + self.name + ', ' +
-                self.grade + ', ' +
-                self.description +
-                '](' + self.mpurl +
-                ') (Route on MountainProject.com)')
+def is_bot_running_win32():
+    return False
 
 
-class Area:
-    name = ''
-    mpurl = ''
-
-    def __init__(self, name, mpurl):
-        self.name = name
-        self.mpurl = mpurl
-
-    def __str__(self):
-        return ('Area Name: ' + self.name +
-                '\n\tURL: ' + self.mpurl)
-
-    def redditstr(self):
-        return ('[' + self.name + '](' + self.mpurl + ') (Area on MountainProject.com)')
-
-
-def findmproute(query):
-    '''
-    Find the best match for a route on MountainProject.com based on the provided string.
-    :param query: String with the query hopefully containing name and location of a route.
-    :return: Route object or None if no route was found.
-    '''
-
-    searchlink = 'https://www.mountainproject.com/ajax/public/search/results/overview?q=' + urllib.parse.quote(query)
-    # "https://www.mountainproject.com/search?q=" + urllib.parse.quote(query)
-
-    name = ''
-    grade = ''
-    description = ''
-    link = None  # initializing the return variable
-
-    r = requests.get(searchlink)
-    j = json.loads(r.content.decode('utf-8'))
-
-    # TODO error handle for no route result (but has area or forum result)
-
-    if len(j['results']) > 0 and j['results'].get('Routes', None) is not None:
-        ajax = j['results']['Routes'][0]
-        soup = BeautifulSoup(ajax, 'html.parser')
-
-        name = soup.tr.td.a.string
-        grade = soup.find('div', class_='hidden-md-down').strong.string
-        description = soup.find('div', class_='hidden-md-down summary').string
-        link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
-
-        return Route(name, grade, description, link)
-
-    else:
-        return None
-
-def findmparea(query):
-    '''
-    Find the best match for an area on MountainProject.com based on the provided string.
-    :param query: String with the query hopefully containing the name of the area.
-    :return: Area object or None if no area was find.
-    '''
-
-    searchlink = 'https://www.mountainproject.com/ajax/public/search/results/overview?q=' + urllib.parse.quote(query)
-    name = ''
-    link = None
-
-    r = requests.get(searchlink)
-    j = json.loads(r.content.decode('utf-8'))
-
-    # TODO error handle for results that don't include Area
-    # TODO test the code below
-    if len(j['results']) > 0 and j['results'].get('Areas', None) is not None:  # TODO test Areas check
-        ajax = j['results']['Areas'][0]
-        soup = BeautifulSoup(ajax, 'html.parser')
-
-        name = soup.tr.td.a.string
-        link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
-
-        return Area(name, link)
-    else:
-        return None
-
-# No longer needed.
-# def is_lock_free():
-#     # Can't do any logging here because we haven't config'd the logger yet.
-#     global lock_socket
-#     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-#     try:
-#         lock_id = "infiniterecursive.climb_bot"
-#         lock_socket.bind('\0' + lock_id)
-#         # logging.debug("Acquired lock %r" % (lock_id,))
-#         return True
-#     except socket.error:
-#         # logging.info("Failed to aquire lock %r" % (lock_id,))
-#         return False
-
-
-def is_bot_running():
+def is_bot_running_UNIX():
     """
     Check if an instance of climb_bot is already running by creating a named socket. If the socket cannot be bound to
     the lock name, then the bot is already running on the system
@@ -157,7 +43,7 @@ def is_bot_running():
     """
     # Can't do any logging here because we haven't config'd the logger yet.
     global lock_socket
-    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)  # AF_UNIX doesn't exist on Windows (ignore warning)
     try:
         lock_id = "infiniterecursive.climb_bot"
         lock_socket.bind('\0' + lock_id)
@@ -167,7 +53,15 @@ def is_bot_running():
         # logging.info("Failed to aquire lock %r" % (lock_id,))
         return True
 
+
 def init():
+    """
+    Setup logging.
+    Load JSON config.
+    Create PRAW Reddit object.
+    :return: The configured PRAW Reddit object.
+    """
+
     global config  # JSON config files will be stored here
 
     # configure logging with timestamp and log level
@@ -176,14 +70,15 @@ def init():
                         level=logging.DEBUG,
                         filename=time.strftime('%Y_%m_%d') + '.log',
                         filemode='a+')
-    logging.info('Initializing')
+
+    logging.info('Initializing...')
 
     # TODO error handling for file/config load and authentication
     # print('Loading config: ', configpath)
-    logging.info('Loading config: ' + configpath)
+    logging.info('Loading config from: ' + configpath)
 
-    configfile = open(configpath, 'r')
-    config = json.load(configfile)
+    with open(configpath, 'r') as configfile:
+        config = json.load(configfile)
     logging.info('Config loaded')
 
     # print('Authenticating to Reddit...')
@@ -204,6 +99,7 @@ def init():
 
     return reddit
 
+
 def main(reddit, subreddit):
     '''
     Execute the logic of the bot. Run after init() is successful.
@@ -213,41 +109,46 @@ def main(reddit, subreddit):
     '''
     logging.info('Getting ' + str(config['reddit.commentsPerCheck']) + ' comments from r/' + subreddit)
     for comment in reddit.subreddit(subreddit).comments(limit=config['reddit.commentsPerCheck']):
-        match = re.findall('![Cc]limb (.*)', comment.body)  # TODO add command 'climb: '. Regex '[Cc]limb: (.*)'
-        if match:
-            logging.info('Found command in comment: ' + comment.id + ': ' + match[0] + ' : ' + comment.permalink)
-            # TODO test permalink
+        match = re.findall('(![Cc]limb|[Cc]limb:) (.*)', comment.body)  # gives a list of tuples (two groups in regex)
 
-            file_obj_r = open(config['bot.commentpath'], 'r')
+        if match:  # necessary to check?
+            logging.debug('Found match: ' + str(match))
+            logging.info('Found command in comment: ' + comment.id + '; ' + match[0][0] + ' ; ' + comment.permalink)
+            logging.debug('vars(comment): ' + str(vars(comment)))
+
+            query = match[0][1]
+            logging.debug('match[0][1]: ' + match[0][1])
+
+            file_obj_r = open(config['bot.commentpath'], 'r')  # with statement
 
             if comment.id not in file_obj_r.read().splitlines():
                 logging.info('Comment ID is unique: ' + comment.id + ' ...retrieving route info and link')
 
                 # TODO see what command we are executing
                 # check for  '!climb area'
-                areaMatch = re.findall('[Aa]rea (.*)', match[0])
+                areaMatch = re.findall('[Aa]rea (.*)', query)
                 if len(areaMatch) > 0:
+                    query = areaMatch[0]
                     logging.info('Found Area command in comment: ' + comment.id)
-                    #TODO process Area command
-                    currentArea = findmparea(areaMatch[0])
+                    currentArea = findmparea(query)
                 else:
                     # check for Route command, otherwise assume we are handling a route.
-                    routeMatch = re.findall('[Rr]oute (.*)', match[0])
+                    routeMatch = re.findall('[Rr]oute (.*)', query)
                     if len(routeMatch) > 0:
+                        query = routeMatch[0]
                         logging.info('Found Route commnd in comment: ' + comment.id)
-                        match[0] = routeMatch[0]
                     else:
                         logging.info('No additional command found; processing as Route command')
 
                     # find the MP route link
-                    currentRoute = findmproute(match[0])
-                    if currentRoute != None:
+                    currentRoute = findmproute(query)
+                    if currentRoute is not None:
                         logging.info('Posting reply to comment: ' + comment.id)
                         comment.reply(currentRoute.redditstr() + config['bot.footer'])
                         # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
                         logging.info('Reply posted to comment: ' + comment.id)
                         logging.info('Opening comment file to record comment: ' + comment.id)
-                        file_obj_w = open(config['bot.commentpath'], 'a+')
+                        file_obj_w = open(config['bot.commentpath'], 'a+')  # with statement
                         file_obj_w.write(comment.id + '\n')
                         file_obj_w.close()
                         logging.info('Comment file updated with comment: ' + comment.id)
@@ -261,21 +162,32 @@ def main(reddit, subreddit):
 
 
 if __name__ == '__main__':
-    if is_bot_running():
-        print('climb_bot is already running')
-        print('exiting...')
-        sys.exit()
-    else:
-        reddit = init()
-        count = 0
-        while True:
-            logging.info('Running bot...')
+    try:
+        if sys.platform == 'win32':
+            if is_bot_running_win32():
+                raise Exception('climb_bot is already running!')
+        else:
+            if is_bot_running_UNIX():
+                raise Exception('climb_bot is already running!')
+    except:
+        print('climb_bot is already running!')
+        print('Exiting...')
 
-            for sub in config['bot.subreddits']:
-                main(reddit, sub)
+        sys.exit(-1)
 
-            logging.info('Loop count is: ' + str(count))
-            print('Count is: ' + str(count))
-            count += 1
-            logging.info('Sleeping ' + str(config['bot.sleep']) + ' seconds...')
-            time.sleep(config['bot.sleep'])
+    reddit = init()
+
+    print('Running climb_bot...')
+    logging.info('Running climb_bot...')
+
+    count = 0
+    while True:
+
+        for sub in config['bot.subreddits']:
+            main(reddit, sub)
+
+        logging.info('Loop count is: ' + str(count))
+        count += 1
+
+        logging.info('Sleeping ' + str(config['bot.sleep']) + ' seconds...')
+        time.sleep(config['bot.sleep'])
