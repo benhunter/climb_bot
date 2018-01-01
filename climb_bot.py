@@ -11,28 +11,50 @@
 #   workon climb_bot_venv && cd climb_bot/ && python climb_bot.py
 
 
+# Standard library
 import json
 import logging
+import os
 import re
 import socket
 import sys
 import time
 
+# Reddit API
 import praw
 
+# Local imports
 from Area import findmparea
 from Route import findmproute
 
 lock_socket = None  # UNIX Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
-
-configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
-# configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
-
 config = None  # store the JSON loaded from config file
+
+if sys.platform == 'win32':
+    configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
+    bot_running_file = 'C:/projects/climb_bot/lock.file'
+else:
+    configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
+    bot_running_file = '/home/infiniterecursive/climb_bot/lock.file'
+
+
+def stop_bot(delete_lockfile=True, exit_code=0):
+    logging.info('Shutting down')
+    if delete_lockfile and os.path.isfile(bot_running_file):
+        logging.debug('Deleting lock file')
+        os.remove(bot_running_file)
+    sys.exit(exit_code)
 
 
 def is_bot_running_win32():
-    return False
+    if os.path.exists(bot_running_file):
+        os.remove(bot_running_file)
+        os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+        return True
+    else:
+        with open(bot_running_file, 'a'):
+            pass
+        return False
 
 
 def is_bot_running_UNIX():
@@ -72,16 +94,12 @@ def init():
                         filemode='a+')
 
     logging.info('Initializing...')
-
-    # TODO error handling for file/config load and authentication
-    # print('Loading config: ', configpath)
     logging.info('Loading config from: ' + configpath)
-
     with open(configpath, 'r') as configfile:
         config = json.load(configfile)
     logging.info('Config loaded')
 
-    # print('Authenticating to Reddit...')
+    # TODO error handling for authentication
     logging.info('Authenticating to Reddit...')  # TODO don't think it actually auth's yet...
     reddit = praw.Reddit(client_id=config['reddit.client_id'],
                          client_secret=config['reddit.client_secret'],
@@ -95,8 +113,8 @@ def init():
         logging.error('Authentication to Reddit is read-only.')
         raise Exception('Authentication to Reddit is read-only.')
     logging.info('Authentication successful.')  # TODO was it really though?
-    logging.info('Initialization complete.')
 
+    logging.info('Initialization complete.')
     return reddit
 
 
@@ -111,54 +129,53 @@ def main(reddit, subreddit):
     for comment in reddit.subreddit(subreddit).comments(limit=config['reddit.commentsPerCheck']):
         match = re.findall('(![Cc]limb|[Cc]limb:) (.*)', comment.body)  # gives a list of tuples (two groups in regex)
 
-        if match:  # necessary to check?
-            logging.debug('Found match: ' + str(match))
-            logging.info('Found command in comment: ' + comment.id + '; ' + match[0][0] + ' ; ' + comment.permalink)
-            logging.debug('vars(comment): ' + str(vars(comment)))
+        if match:
+            logging.info('Found command ' + str(match) + ' in comment: ' + comment.id + ' ; ' + comment.permalink)
 
-            query = match[0][1]
-            logging.debug('match[0][1]: ' + match[0][1])
+            query = match[0][1]  # take the first Tuple in the List, and the second regex group from the Tuple
 
             file_obj_r = open(config['bot.commentpath'], 'r')  # with statement
+            with open(config['bot.commentpath'], 'r') as file_obj_r:
+                if comment.id not in file_obj_r.read().splitlines():
+                    logging.info('Comment ID is unique: ' + comment.id)
+                    logging.debug('vars(comment): ' + str(vars(comment)))
 
-            if comment.id not in file_obj_r.read().splitlines():
-                logging.info('Comment ID is unique: ' + comment.id + ' ...retrieving route info and link')
+                    # check for  '!climb area'
+                    area_match = re.findall('[Aa]rea (.*)', query)
+                    if len(area_match) > 0:
+                        query = area_match[0]
+                        logging.info('Found Area command in comment: ' + comment.id)
+                        logging.debug('Searching MP for Area query: ' + query)
+                        current_area = findmparea(query)
+                        # TODO implement code to post comment for Area
+                    else:
+                        # check for Route command, otherwise assume we are handling a route.
+                        route_match = re.findall('[Rr]oute (.*)', query)
+                        if len(route_match) > 0:
+                            query = route_match[0]
+                            logging.info('Found Route command in comment: ' + comment.id)
+                        else:
+                            logging.info('No additional command found; processing as Route command')
 
-                # TODO see what command we are executing
-                # check for  '!climb area'
-                areaMatch = re.findall('[Aa]rea (.*)', query)
-                if len(areaMatch) > 0:
-                    query = areaMatch[0]
-                    logging.info('Found Area command in comment: ' + comment.id)
-                    currentArea = findmparea(query)
+                        # find the MP route link
+                        logging.debug('Searching MP for Route query: ' + query)
+                        current_route = findmproute(query)
+                        if current_route is not None:
+                            logging.info('Posting reply to comment: ' + comment.id)
+                            comment.reply(current_route.redditstr() + config['bot.footer'])
+                            # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
+                            logging.info('Reply posted to comment: ' + comment.id)
+                            logging.info('Opening comment file to record comment: ' + comment.id)
+
+                            # Note that file_obj_r is still open...
+                            with open(config['bot.commentpath'], 'a+') as file_obj_w:
+                                file_obj_w.write(comment.id + '\n')
+                                logging.info('Comment file updated with comment: ' + comment.id)
+                        else:
+                            logging.warning('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
+                                            '. Body: ' + comment.body)
                 else:
-                    # check for Route command, otherwise assume we are handling a route.
-                    routeMatch = re.findall('[Rr]oute (.*)', query)
-                    if len(routeMatch) > 0:
-                        query = routeMatch[0]
-                        logging.info('Found Route commnd in comment: ' + comment.id)
-                    else:
-                        logging.info('No additional command found; processing as Route command')
-
-                    # find the MP route link
-                    currentRoute = findmproute(query)
-                    if currentRoute is not None:
-                        logging.info('Posting reply to comment: ' + comment.id)
-                        comment.reply(currentRoute.redditstr() + config['bot.footer'])
-                        # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
-                        logging.info('Reply posted to comment: ' + comment.id)
-                        logging.info('Opening comment file to record comment: ' + comment.id)
-                        file_obj_w = open(config['bot.commentpath'], 'a+')  # with statement
-                        file_obj_w.write(comment.id + '\n')
-                        file_obj_w.close()
-                        logging.info('Comment file updated with comment: ' + comment.id)
-                    else:
-                        logging.warning('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
-                                        '. Body: ' + comment.body)
-            else:
-                logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
-
-            file_obj_r.close()
+                    logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
 
 
 if __name__ == '__main__':
@@ -172,8 +189,7 @@ if __name__ == '__main__':
     except:
         print('climb_bot is already running!')
         print('Exiting...')
-
-        sys.exit(-1)
+        stop_bot(delete_lockfile=True, exit_code=-1)
 
     reddit = init()
 
@@ -182,12 +198,9 @@ if __name__ == '__main__':
 
     count = 0
     while True:
-
         for sub in config['bot.subreddits']:
             main(reddit, sub)
 
-        logging.info('Loop count is: ' + str(count))
         count += 1
-
-        logging.info('Sleeping ' + str(config['bot.sleep']) + ' seconds...')
+        logging.info('Loop count is: ' + str(count) + '. Sleeping ' + str(config['bot.sleep']) + ' seconds...')
         time.sleep(config['bot.sleep'])
