@@ -37,7 +37,7 @@ def findmparea(query):
 
     # TODO error handle for results that don't include Area
     # TODO test the code below
-    if len(j['results']) > 0 and j['results'].get('Areas', None) is not None:  # TODO test Areas check
+    if len(j['results']) > 0 and j['results'].get('Areas'):  # TODO test Areas check
         ajax = j['results']['Areas'][0]
         soup = BeautifulSoup(ajax, 'html.parser')
 

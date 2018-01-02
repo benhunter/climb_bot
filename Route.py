@@ -51,7 +51,7 @@ def findmproute(query):
 
     # TODO error handle for no route result (but has area or forum result)
 
-    if len(j['results']) > 0 and j['results'].get('Routes', None) is not None:
+    if len(j['results']) > 0 and j['results'].get('Routes'):
         ajax = j['results']['Routes'][0]
         soup = BeautifulSoup(ajax, 'html.parser')
 
