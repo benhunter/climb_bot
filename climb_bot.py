@@ -27,7 +27,7 @@ from Config import Config
 from Route import findmproute
 
 lock_socket = None  # UNIX Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
-config = None  # store the Config loaded from JSON config file
+config = Config()  # store the Config loaded from JSON config file
 
 if sys.platform == 'win32':
     configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
@@ -73,6 +73,22 @@ def is_bot_running():
         except socket.error:
             # logging.info("Failed to aquire lock %r" % (lock_id,))
             return True
+
+
+def record_comment(comment_id):
+    with open(config.bot_commentpath, 'a+') as file_obj_w:
+        logging.info('Writing file: ' + config.bot_commentpath + ', with comment: ' + comment_id)
+        file_obj_w.write(comment_id + '\n')
+        return True
+    return False
+
+
+def check_already_commented(comment_id):
+    with open(config.bot_commentpath, 'r') as file_obj_r:
+        logging.info('Reading file: ' + config.bot_commentpath)
+        if comment_id in file_obj_r.read().splitlines():
+            return True
+    return False
 
 
 def init():
@@ -133,47 +149,41 @@ def main(reddit_client, subreddit):
 
             query = match[0][1]  # take the first Tuple in the List, and the second regex group from the Tuple
 
-            with open(config.bot_commentpath, 'r') as file_obj_r:
-                if comment.id not in file_obj_r.read().splitlines():
-                    logging.info('Comment ID is unique: ' + comment.id)
-                    logging.debug('vars(comment): ' + str(vars(comment)))
+            if not check_already_commented(comment.id):
+                logging.info('Comment ID is unique: ' + comment.id)
+                logging.debug('vars(comment): ' + str(vars(comment)))
 
-                    # check for  '!climb area'
-                    area_match = re.findall('[Aa]rea (.*)', query)
-                    if len(area_match) > 0:
-                        query = area_match[0]
-                        logging.info('Found Area command in comment: ' + comment.id)
-                        logging.debug('Searching MP for Area query: ' + query)
-                        current_area = findmparea(query)
-                        # TODO implement code to post comment for Area
-                    else:
-                        # check for Route command, otherwise assume we are handling a route.
-                        route_match = re.findall('[Rr]oute (.*)', query)
-                        if len(route_match) > 0:
-                            query = route_match[0]
-                            logging.info('Found Route command in comment: ' + comment.id)
-                        else:
-                            logging.info('No additional command found; processing as Route command')
-
-                        # find the MP route link
-                        logging.debug('Searching MP for Route query: ' + query)
-                        current_route = findmproute(query)
-                        if current_route is not None:
-                            logging.info('Posting reply to comment: ' + comment.id)
-                            comment.reply(current_route.redditstr() + config.bot_footer)
-                            # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
-                            logging.info('Reply posted to comment: ' + comment.id)
-                            logging.info('Opening comment file to record comment: ' + comment.id)
-
-                            # Note that file_obj_r is still open...
-                            with open(config.bot_commentpath, 'a+') as file_obj_w:
-                                file_obj_w.write(comment.id + '\n')
-                                logging.info('Comment file updated with comment: ' + comment.id)
-                        else:
-                            logging.warning('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
-                                            '. Body: ' + comment.body)
+                # check for  '!climb area'
+                area_match = re.findall('[Aa]rea (.*)', query)
+                if len(area_match) > 0:
+                    query = area_match[0]
+                    logging.info('Found Area command in comment: ' + comment.id)
+                    logging.debug('Searching MP for Area query: ' + query)
+                    current_area = findmparea(query)
+                    # TODO implement code to post comment for Area
                 else:
-                    logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
+                    # check for Route command, otherwise assume we are handling a route.
+                    route_match = re.findall('[Rr]oute (.*)', query)
+                    if len(route_match) > 0:
+                        query = route_match[0]
+                        logging.info('Found Route command in comment: ' + comment.id)
+                    else:
+                        logging.info('No additional command found; processing as Route command')
+
+                    # find the MP route link
+                    logging.debug('Searching MP for Route query: ' + query)
+                    current_route = findmproute(query)
+                    if current_route is not None:
+                        logging.info('Posting reply to comment: ' + comment.id)
+                        comment.reply(current_route.redditstr() + config.bot_footer)
+                        # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
+                        logging.info('Reply posted to comment: ' + comment.id)
+                        record_comment(comment.id)
+                    else:
+                        logging.warning('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
+                                        '. Body: ' + comment.body)
+            else:
+                logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
 
 
 if __name__ == '__main__':
