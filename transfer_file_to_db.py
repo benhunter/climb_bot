@@ -16,6 +16,7 @@ print(configpath)
 config = Config.Config(configpath)
 
 print(config.bot_commentpath)
+print(config.bot_dbname)
 
 with open(config.bot_commentpath) as file:
     with sqlite3.connect(config.bot_dbname) as db:
