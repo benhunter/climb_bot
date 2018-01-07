@@ -5,7 +5,6 @@
 # TODO email a summary of actions daily
 # TODO configure PRAW max retries so program doesn't end when it can't connect
 # TODO store list of comment IDs in a database, maybe SQLite
-# TODO cleanup the debugging comments because it makes the log file cluttered and hard to read. Simplifiy!
 
 # PythonAnywhere hourly command:
 #   workon climb_bot_venv && cd climb_bot/ && python climb_bot.py
@@ -47,7 +46,7 @@ def stop_bot(delete_lockfile=True, exit_code=0):
 
 def is_bot_running():
     if sys.platform == 'win32':
-        # TODO Using a file for a lock is not working.
+        # TODO Using a file for a lock is not working, so we fake it...
         # if os.path.exists(bot_running_file):
         #     os.remove(bot_running_file)
         #     os.open(bot_running_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
@@ -146,16 +145,15 @@ def main(reddit_client, subreddit):
 
         if match:
             logging.info('Found command ' + str(match) + ' in comment: ' + comment.id + ' ; ' + comment.permalink)
-
             query = match[0][1]  # take the first Tuple in the List, and the second regex group from the Tuple
 
             if not check_already_commented(comment.id):
-                logging.info('Comment ID is unique: ' + comment.id)
+                logging.info('Comment ID has not been processed yet: ' + comment.id)
                 logging.debug('vars(comment): ' + str(vars(comment)))
 
                 # check for  '!climb area'
                 area_match = re.findall('[Aa]rea (.*)', query)
-                if len(area_match) > 0:
+                if area_match:
                     query = area_match[0]
                     logging.info('Found Area command in comment: ' + comment.id)
                     logging.debug('Searching MP for Area query: ' + query)
@@ -164,7 +162,7 @@ def main(reddit_client, subreddit):
                 else:
                     # check for Route command, otherwise assume we are handling a route.
                     route_match = re.findall('[Rr]oute (.*)', query)
-                    if len(route_match) > 0:
+                    if route_match:
                         query = route_match[0]
                         logging.info('Found Route command in comment: ' + comment.id)
                     else:
@@ -173,15 +171,15 @@ def main(reddit_client, subreddit):
                     # find the MP route link
                     logging.debug('Searching MP for Route query: ' + query)
                     current_route = findmproute(query)
-                    if current_route is not None:
+                    if current_route:
                         logging.info('Posting reply to comment: ' + comment.id)
                         comment.reply(current_route.redditstr() + config.bot_footer)
                         # TODO does PRAW return the comment ID of the reply we just submitted? Log permalink
                         logging.info('Reply posted to comment: ' + comment.id)
                         record_comment(comment.id)
                     else:
-                        logging.warning('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
-                                        '. Body: ' + comment.body)
+                        logging.error('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
+                                      '. Body: ' + comment.body)
             else:
                 logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
 
