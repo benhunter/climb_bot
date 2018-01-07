@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import socket
+import sqlite3
 import sys
 import time
 
@@ -27,6 +28,7 @@ from Route import findmproute
 
 lock_socket = None  # UNIX Method for long running tasks https://help.pythonanywhere.com/pages/LongRunningTasks
 config = Config()  # store the Config loaded from JSON config file
+db = None
 
 if sys.platform == 'win32':
     configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
@@ -75,19 +77,36 @@ def is_bot_running():
 
 
 def record_comment(comment_id):
-    with open(config.bot_commentpath, 'a+') as file_obj_w:
-        logging.info('Writing file: ' + config.bot_commentpath + ', with comment: ' + comment_id)
-        file_obj_w.write(comment_id + '\n')
-        return True
-    return False
+    """
+    Updated the database db with comment_id. Requires global db to be connected already.
+    :param comment_id: String with comment ID to add to db.
+    """
+    cursor = db.cursor()
+    logging.info('Database input: INSERT INTO comments VALUES (?)' + comment_id)
+    cursor.execute('INSERT INTO comments VALUES (?)', (comment_id,))
+    cursor.close()
+    db.commit()
+
 
 
 def check_already_commented(comment_id):
-    with open(config.bot_commentpath, 'r') as file_obj_r:
-        logging.info('Reading file: ' + config.bot_commentpath)
-        if comment_id in file_obj_r.read().splitlines():
-            return True
-    return False
+    """
+    Checks the comment database to see if comment_id has already been processed. Requires global db to be
+    connected already.
+    :param comment_id: String with comment ID to check.
+    :return: True if comment ID is in db
+    """
+    cursor = db.cursor()
+    logging.info('Database query: SELECT comment_id FROM comments WHERE comment_id=' + comment_id)
+    result = cursor.execute('SELECT comment_id FROM comments WHERE comment_id=?', (comment_id,))
+    result = result.fetchall()
+    cursor.close()
+
+    if result:
+        return True
+    else:
+        return False
+    # return Result?
 
 
 def init():
@@ -99,9 +118,9 @@ def init():
     """
 
     global config  # JSON config files will be stored here
+    global db  # database goes here
 
-    # configure logging with timestamp and log level
-    # name the log file by date.
+    # Configure logging with timestamp and log level. Name the log file by date.
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                         level=logging.DEBUG,
                         filename=time.strftime('%Y_%m_%d') + '.log',
@@ -111,6 +130,13 @@ def init():
     logging.info('Loading config from: ' + configpath)
     config = Config(configpath)
     logging.info('Config loaded')
+
+    logging.info('Loading database: ' + config.bot_dbname)
+    db = sqlite3.connect(config.bot_dbname)
+    cursor = db.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS comments (comment_id)')
+    cursor.close()
+    db.commit()
 
     # TODO error handling for authentication
     logging.info('Authenticating to Reddit...')  # TODO don't think it actually auth's yet...
