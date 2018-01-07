@@ -27,9 +27,8 @@ with open(config.bot_commentpath) as file:
         cursor.close()
         db.commit()
 
-with open(config.bot_commentpath) as file:
-    with sqlite3.connect(config.bot_dbname) as db:
-        cursor = db.cursor()
-        data = cursor.execute('SELECT * from comments').fetchall()
-        print(data)
-        print(len(data))
+with sqlite3.connect(config.bot_dbname) as db:
+    cursor = db.cursor()
+    data = cursor.execute('SELECT * from comments').fetchall()
+    print(data)
+    print(len(data))
