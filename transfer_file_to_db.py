@@ -11,21 +11,28 @@ if sys.platform == 'win32':
 else:
     configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
 
+print(configpath)
+
 config = Config.Config(configpath)
+
+print(config.bot_commentpath)
 
 with open(config.bot_commentpath) as file:
     with sqlite3.connect(config.bot_dbname) as db:
         cursor = db.cursor()
         # cursor.execute('DROP TABLE comments')
+        print('Trying: CREATE TABLE IF NOT EXISTS comments (comment_id UNIQUE)')
         cursor.execute('CREATE TABLE IF NOT EXISTS comments (comment_id UNIQUE)')
         for comment in file:
             try:
                 comment = comment.strip()
+                print('INSERT INTO comments VALUES (?)', (comment,))
                 cursor.execute('INSERT INTO comments VALUES (?)', (comment,))
-            except sqlite3.IntegrityError:
-                pass
+            except sqlite3.IntegrityError as e:
+                print('Caught exception', e)
         cursor.close()
         db.commit()
+        print('Done updating DB')
 
 with sqlite3.connect(config.bot_dbname) as db:
     cursor = db.cursor()
