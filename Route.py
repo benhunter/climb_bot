@@ -55,7 +55,7 @@ def findmproute(query):
 
     # TODO error handle for no route result (but has area or forum result)
 
-    if len(j['results']) > 0 and j['results'].get('Routes'):
+    if j['results'] and j['results'].get('Routes'):
         ajax = j['results']['Routes'][0]
         soup = BeautifulSoup(ajax, 'html.parser')
 
@@ -86,6 +86,8 @@ class TestRoute(unittest.TestCase):
         self.assertEqual(r.name, 'The Nose')
         self.assertEqual(r.description, 'Trad, Aid, 31 pitches, 3000 ft')
         self.assertEqual(r.grade, '5.9 C2')
+
+        self.assertIsNone(findmproute('sdfasdfasfdsfdrandom123'))
 
 
 if __name__ == '__main__':

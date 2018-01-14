@@ -51,6 +51,11 @@ def findmparea(query):
         name = soup.tr.td.a.string
         link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
 
+        # print(ajax)
+        # print()
+        # print(soup)
+
+
         return Area(mpurl=link, name=name)
     else:
         return None
