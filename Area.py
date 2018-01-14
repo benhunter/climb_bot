@@ -25,7 +25,7 @@ class Area:
                 '\n\tDescription: ' + self.description)
 
     def redditstr(self):
-        return '[' + self.name + '\n\nDescription: ' + self.description + '](' + self.mpurl + ') (Area on MountainProject.com)'
+        return '[' + self.name + '](' + self.mpurl + ') (Area on MountainProject.com)\n***\nDescription: ' + self.description
 
 
 # TODO add description from MP
