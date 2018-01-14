@@ -21,10 +21,11 @@ class Area:
 
     def __str__(self):
         return ('Area Name: ' + self.name +
-                '\n\tURL: ' + self.mpurl)
+                '\n\tURL: ' + self.mpurl +
+                '\n\tDescription: ' + self.description)
 
     def redditstr(self):
-        return '[' + self.name + '](' + self.mpurl + ') (Area on MountainProject.com)'
+        return '[' + self.name + '. ' + self.description + '](' + self.mpurl + ') (Area on MountainProject.com)'
 
 
 # TODO add description from MP
@@ -42,21 +43,20 @@ def findmparea(query):
     r = requests.get(searchlink)
     j = json.loads(r.content.decode('utf-8'))
 
-    # TODO error handle for results that don't include Area
-    # TODO test the code below
-    if len(j['results']) > 0 and j['results'].get('Areas'):  # TODO test Areas check
+    if len(j['results']) > 0 and j['results'].get('Areas'):
         ajax = j['results']['Areas'][0]
         soup = BeautifulSoup(ajax, 'html.parser')
 
         name = soup.tr.td.a.string
         link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
 
-        # print(ajax)
-        # print()
-        # print(soup)
+        # Making a new request to the Area's page and parsing out the Description.
+        req_area_details = requests.get(link)
+        soup_area_details = BeautifulSoup(req_area_details.content, 'html.parser')
+        description = soup_area_details.select('#text-2')[0].get_text().strip()
 
+        return Area(mpurl=link, name=name, description=description)
 
-        return Area(mpurl=link, name=name)
     else:
         return None
 
@@ -75,7 +75,7 @@ class TestArea(unittest.TestCase):
                          'https://www.mountainproject.com/area/105833388/yosemite-valley?search=1&type=area&method=resultsPage&query=Yosemite')
         self.assertEqual(r.name, 'Yosemite Valley')
         self.assertEqual(r.description,
-                         "Yosemite Valley is THE PLACE for many rock climbers. A literal mecca for climbers across the globe, the crags and walls of \"The Valley\" see thousands of climber-days in the course of a year. During the height of the season, it's typical to hear climbers on El Capitan yelling back and forth in English, German, Japanese, Russian and many other languages. In this one place, many factors come together to form a nearly perfect arena for rock climbing; mild weather, beautiful scenery, and incredible granite walls perfectly suited to climbing. On a rest day, visit the many tremendous waterfalls, hike some of the beautiful trails, and breathe in one of the most incredible places in the entire country. ")
+                         "Yosemite Valley is THE PLACE for many rock climbers. A literal mecca for climbers across the globe, the crags and walls of \"The Valley\" see thousands of climber-days in the course of a year. During the height of the season, it's typical to hear climbers on El Capitan yelling back and forth in English, German, Japanese, Russian and many other languages. In this one place, many factors come together to form a nearly perfect arena for rock climbing; mild weather, beautiful scenery, and incredible granite walls perfectly suited to climbing. On a rest day, visit the many tremendous waterfalls, hike some of the beautiful trails, and breathe in one of the most incredible places in the entire country.")
 
 
 if __name__ == '__main__':

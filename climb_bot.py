@@ -7,7 +7,12 @@
 # TODO store list of comment IDs in a database, maybe SQLite
 
 # PythonAnywhere hourly command:
-#   workon climb_bot_venv && cd climb_bot/ && python climb_bot.py
+#   workon climb_bot_venv && cd ~/climb_bot/ && python climb_bot.py
+#
+# Console:
+#   ~/climb_bot (master)$ workon climb_bot_venv
+#   ~/climb_bot (master)$ git pull
+
 
 # Standard library
 import logging
@@ -119,6 +124,7 @@ def init():
     global config  # JSON config files will be stored here
     global db  # database goes here
 
+    # TODO put log files in the logs folder via config.bot_logfolder if possible
     # Configure logging with timestamp and log level. Name the log file by date.
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                         level=logging.DEBUG,
@@ -183,7 +189,14 @@ def main(reddit_client, subreddit):
                     logging.info('Found Area command in comment: ' + comment.id)
                     logging.debug('Searching MP for Area query: ' + query)
                     current_area = findmparea(query)
-                    # TODO implement code to post comment for Area
+                    if current_area:
+                        logging.info('Posting reply to comment: ' + comment.id)
+                        comment.reply(current_area.redditstr() + config.bot_footer)
+                        logging.info('Reply posted to comment: ' + comment.id)
+                        record_comment(comment.id)
+                    else:
+                        logging.error('ERROR RETRIEVING AREA LINK AND INFO FROM MP. Comment: ' + comment.id +
+                                      '. Body: ' + comment.body)
                 else:
                     # check for Route command, otherwise assume we are handling a route.
                     route_match = re.findall('[Rr]oute (.*)', query)
@@ -203,7 +216,7 @@ def main(reddit_client, subreddit):
                         logging.info('Reply posted to comment: ' + comment.id)
                         record_comment(comment.id)
                     else:
-                        logging.error('ERROR RETRIEVING LINK AND INFO FROM MP. Comment: ' + comment.id +
+                        logging.error('ERROR RETRIEVING ROUTE LINK AND INFO FROM MP. Comment: ' + comment.id +
                                       '. Body: ' + comment.body)
             else:
                 logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')

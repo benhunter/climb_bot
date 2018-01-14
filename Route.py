@@ -83,7 +83,6 @@ class TestRoute(unittest.TestCase):
         self.assertEqual(r.grade, '')
         self.assertEqual(r.mpsearchurl, '')
 
-
     def test_findmproute(self):
         # json.loads = MagicMock(return_value={'results':{'Routes':'data'}})
 
