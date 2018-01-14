@@ -10,22 +10,25 @@ class Route:
     """
 
     """
+    mpurl = ''
     name = ''
     grade = ''
     description = ''
-    mpurl = ''
+    mpsearchurl = ''
 
-    def __init__(self, mpurl='', name='', grade='', description=''):
+    def __init__(self, mpurl='', name='', grade='', description='', mpsearchurl=''):
+        self.mpurl = mpurl
         self.name = name
         self.grade = grade
         self.description = description
-        self.mpurl = mpurl
+        self.mpsearchurl = mpsearchurl
 
     def __str__(self):
         return ('Route\n\tName: ' + self.name +
                 '\n\tGrade: ' + self.grade +
                 '\n\tDescription: ' + self.description +
-                '\n\tURL: ' + self.mpurl)
+                '\n\tURL: ' + self.mpurl +
+                '\n\tSearch URL: ' + self.mpsearchurl)
 
     def redditstr(self):
         return ('[' + self.name + ', ' +
@@ -64,7 +67,7 @@ def findmproute(query):
         description = soup.find('div', class_='hidden-md-down summary').string
         link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
 
-        return Route(mpurl=link, name=name, grade=grade, description=description)
+        return Route(mpurl=link, name=name, grade=grade, description=description, mpsearchurl=searchlink)
 
     else:
         return None
@@ -78,16 +81,38 @@ class TestRoute(unittest.TestCase):
         self.assertEqual(r.name, '')
         self.assertEqual(r.description, '')
         self.assertEqual(r.grade, '')
+        self.assertEqual(r.mpsearchurl, '')
+
 
     def test_findmproute(self):
+        # json.loads = MagicMock(return_value={'results':{'Routes':'data'}})
+
         r = findmproute('The Nose, Yosemite')
+
         self.assertEqual(r.mpurl,
                          'https://www.mountainproject.com/route/105924807/the-nose?search=1&type=route&method=resultsPage&query=The%20Nose%2C%20Yosemite')
         self.assertEqual(r.name, 'The Nose')
         self.assertEqual(r.description, 'Trad, Aid, 31 pitches, 3000 ft')
         self.assertEqual(r.grade, '5.9 C2')
+        self.assertEqual(r.mpsearchurl,
+                         'https://www.mountainproject.com/ajax/public/search/results/overview?q=The%20Nose%2C%20Yosemite')
 
         self.assertIsNone(findmproute('sdfasdfasfdsfdrandom123'))
+
+    # def test_findmproute_no_network(self):
+    #     # json.loads = MagicMock(return_value={'results':'data'})
+    #
+    #     r = findmproute('The Nose, Yosemite')
+    #
+    #     self.assertEqual(r.mpurl,
+    #                      'https://www.mountainproject.com/route/105924807/the-nose?search=1&type=route&method=resultsPage&query=The%20Nose%2C%20Yosemite')
+    #     self.assertEqual(r.name, 'The Nose')
+    #     self.assertEqual(r.description, 'Trad, Aid, 31 pitches, 3000 ft')
+    #     self.assertEqual(r.grade, '5.9 C2')
+    #     self.assertEqual(r.mpsearchurl,
+    #                      'https://www.mountainproject.com/ajax/public/search/results/overview?q=The%20Nose%2C%20Yosemite')
+    #
+    #     self.assertIsNone(findmproute('sdfasdfasfdsfdrandom123'))
 
 
 if __name__ == '__main__':
