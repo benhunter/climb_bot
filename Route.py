@@ -1,4 +1,5 @@
 import json
+import unittest
 import urllib.parse
 
 import requests
@@ -6,12 +7,15 @@ from bs4 import BeautifulSoup
 
 
 class Route:
+    """
+
+    """
     name = ''
     grade = ''
     description = ''
     mpurl = ''
 
-    def __init__(self, name, grade, description, mpurl):
+    def __init__(self, mpurl='', name='', grade='', description=''):
         self.name = name
         self.grade = grade
         self.description = description
@@ -60,7 +64,29 @@ def findmproute(query):
         description = soup.find('div', class_='hidden-md-down summary').string
         link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
 
-        return Route(name, grade, description, link)
+        return Route(mpurl=link, name=name, grade=grade, description=description)
 
     else:
         return None
+
+
+class TestRoute(unittest.TestCase):
+
+    def test_init(self):
+        r = Route()
+        self.assertEqual(r.mpurl, '')
+        self.assertEqual(r.name, '')
+        self.assertEqual(r.description, '')
+        self.assertEqual(r.grade, '')
+
+    def test_findmproute(self):
+        r = findmproute('The Nose, Yosemite')
+        self.assertEqual(r.mpurl,
+                         'https://www.mountainproject.com/route/105924807/the-nose?search=1&type=route&method=resultsPage&query=The%20Nose%2C%20Yosemite')
+        self.assertEqual(r.name, 'The Nose')
+        self.assertEqual(r.description, 'Trad, Aid, 31 pitches, 3000 ft')
+        self.assertEqual(r.grade, '5.9 C2')
+
+
+if __name__ == '__main__':
+    unittest.main()

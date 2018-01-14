@@ -88,7 +88,6 @@ def record_comment(comment_id):
     db.commit()
 
 
-
 def check_already_commented(comment_id):
     """
     Checks the comment database to see if comment_id has already been processed. Requires global db to be
