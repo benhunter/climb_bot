@@ -7,7 +7,7 @@ import climb_bot
 if sys.platform == 'win32':
     configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
 else:
-    configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
+    configpath = './config.json'  # path on linux server, duh it's in the same directory
 
 config = Config.Config(configpath)
 # climb_bot.init()
