@@ -27,4 +27,7 @@ for comment in reddit_client.subreddit(subreddit).comments(limit=climb_bot.confi
 
 comment = reddit_client.comment('dtbkk0a')
 print(comment, comment.body)
+print(comment, comment.permalink)
+print('https://www.reddit.com' + comment.permalink)
+print(comment, comment.submission)
 print(dir(comment))
