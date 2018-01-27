@@ -2,9 +2,8 @@
 # TODO find way to automatically push code to pythonanywhere.com
 # TODO delete own posts if downvoted
 # TODO auto-post (instead of being called) route details for a link to mountainproject that someone posted
-# TODO email a summary of actions daily
+# TODO email a summary of actions daily (or just immediately send out a notification)
 # TODO configure PRAW max retries so program doesn't end when it can't connect
-# TODO store list of comment IDs in a database, maybe SQLite
 
 # PythonAnywhere hourly command:
 #   workon climb_bot_venv && cd ~/climb_bot/ && python climb_bot.py
