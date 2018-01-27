@@ -39,5 +39,5 @@ result = result.fetchall()
 for comment in result:
     # print(comment)
     comment = reddit.comment(comment[0])
-    link = 'https://www.reddit.com' + comment.permalink
+    link = 'https://www.reddit.com' + str(comment.permalink)
     print(link)
