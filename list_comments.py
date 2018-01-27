@@ -37,6 +37,6 @@ result = cursor.execute('SELECT comment_id FROM comments')
 result = result.fetchall()
 
 for comment in result:
-    comment = reddit.comment(comment)
+    comment = reddit.comment(comment[0])
     link = comment.link_permalink + str(comment) + '/'
     print(link)
