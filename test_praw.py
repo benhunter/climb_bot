@@ -25,9 +25,15 @@ for comment in reddit_client.subreddit(subreddit).comments(limit=climb_bot.confi
 
 # TODO find a comment based only on it's id: dtbkk0a
 
-comment = reddit_client.comment('dtbkk0a')
+test_comment = 'dtbkk0a'
+
+comment = reddit_client.comment(test_comment)
 print(comment, comment.body)
 print(comment, comment.permalink)
 print('https://www.reddit.com' + comment.permalink)
 print(comment, comment.submission)
 print(dir(comment))
+
+comment = reddit_client.comment(test_comment)
+link = 'https://www.reddit.com' + comment.permalink
+print(link)
