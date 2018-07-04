@@ -65,7 +65,7 @@ def findmproute(query):
         name = soup.tr.td.a.string
         grade = soup.find('div', class_='hidden-md-down').strong.string
         description = soup.find('div', class_='hidden-md-down summary').string
-        link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']
+        link = 'https://www.mountainproject.com' + soup.tr.td.strong.a['href']  # TODO remove characters after '?'
 
         return Route(mpurl=link, name=name, grade=grade, description=description, mpsearchurl=searchlink)
 

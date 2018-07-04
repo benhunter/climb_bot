@@ -11,6 +11,7 @@
 # Console:
 #   ~/climb_bot (master)$ workon climb_bot_venv
 #   ~/climb_bot (master)$ git pull
+#   ~/climb_bot (master)$ python climb_bot.py
 
 
 # Standard library
