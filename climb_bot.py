@@ -237,9 +237,16 @@ if __name__ == '__main__':
 
     count = 0
     while True:
-        for sub in config.bot_subreddits:
-            main(reddit, sub)
+        try:
+            # sleep first in case we hit an exception and are looping again
+            logging.info('Loop count is: ' + str(count) + '. Sleeping ' + str(config.bot_sleep) + ' seconds...')
+            time.sleep(config.bot_sleep)
 
-        count += 1
-        logging.info('Loop count is: ' + str(count) + '. Sleeping ' + str(config.bot_sleep) + ' seconds...')
-        time.sleep(config.bot_sleep)
+            for sub in config.bot_subreddits:
+                main(reddit, sub)
+
+            count += 1
+
+        except Exception as e:
+            logging.exception('EXCEPTION!', exc_info=e)
+            logging.debug('Continuing after exception')
