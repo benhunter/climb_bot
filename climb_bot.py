@@ -4,6 +4,7 @@
 # TODO auto-post (instead of being called) route details for a link to mountainproject that someone posted
 # TODO email a summary of actions daily (or just immediately send out a notification)
 # TODO configure PRAW max retries so program doesn't end when it can't connect
+# TODO Use the standard library's configparser: https://docs.python.org/3/library/configparser.html
 
 # PythonAnywhere hourly command:
 #   workon climb_bot_venv && cd ~/climb_bot/ && python climb_bot.py
