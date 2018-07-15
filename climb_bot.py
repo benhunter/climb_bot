@@ -172,7 +172,8 @@ def main(reddit_client, subreddit):
 
     logging.info('Getting ' + str(config.reddit_commentsPerCheck) + ' comments from r/' + subreddit)
     for comment in reddit_client.subreddit(subreddit).comments(limit=config.reddit_commentsPerCheck):
-        match = re.findall('(![Cc]limb|[Cc]limb:) (.*)', comment.body)  # gives a list of tuples (two groups in regex)
+        match = re.findall('(![Cc]limb|[Cc]limb:) (.*)', comment.body)  # gives a list of tuples
+        # (because there are two groups in the regex)
 
         if match:
             logging.info('Found command ' + str(match) + ' in comment: ' + comment.id + ' ; ' + comment.permalink)
@@ -182,7 +183,7 @@ def main(reddit_client, subreddit):
                 logging.info('Comment ID has not been processed yet: ' + comment.id)
                 logging.debug('vars(comment): ' + str(vars(comment)))
 
-                # check for  '!climb area'
+                # check for  '!climb area' or 'climb: area'
                 area_match = re.findall('[Aa]rea (.*)', query)
                 if area_match:
                     query = area_match[0]
