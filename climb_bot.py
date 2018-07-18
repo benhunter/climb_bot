@@ -5,6 +5,9 @@
 # TODO email a summary of actions daily (or just immediately send out a notification)
 # TODO configure PRAW max retries so program doesn't end when it can't connect
 # TODO Use the standard library's configparser: https://docs.python.org/3/library/configparser.html
+# TODO when searching within a comment, split by newlines
+# TODO handle multiple requests within a single post
+# TODO record the content of comments that are replied to and check for edits
 
 # PythonAnywhere hourly command:
 #   workon climb_bot_venv && cd ~/climb_bot/ && python climb_bot.py
