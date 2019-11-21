@@ -1,0 +1,6 @@
+*.log
+climb_bot.db
+.cache/
+.idea/
+venv/
+__pycache__/
