@@ -23,9 +23,8 @@ class Area:
         self.description = description
 
     def __str__(self):
-        return ('Area Name: ' + self.name +
-                '\n\tURL: ' + self.mpurl +
-                '\n\tDescription: ' + self.description)
+        return ('Area Name: ' + self.name + '\n\tURL: ' + self.mpurl
+                + '\n\tDescription: ' + self.description)
 
     def redditstr(self):
         return '[' + self.name + '](' + self.mpurl + ') (Area on MountainProject.com)\n***\nDescription: ' + self.description

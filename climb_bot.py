@@ -200,8 +200,8 @@ def main(reddit_client, subreddit):
                         logging.info('Reply posted to comment: ' + comment.id)
                         record_comment(comment.id)
                     else:
-                        logging.error('ERROR RETRIEVING AREA LINK AND INFO FROM MP. Comment: ' + comment.id +
-                                      '. Body: ' + comment.body)
+                        logging.error('ERROR RETRIEVING AREA LINK AND INFO FROM MP. Comment: ' + comment.id
+                                      + '. Body: ' + comment.body)
                 else:
                     # check for Route command, otherwise assume we are handling a route.
                     route_match = re.findall('[Rr]oute (.*)', query)
@@ -221,8 +221,8 @@ def main(reddit_client, subreddit):
                         logging.info('Reply posted to comment: ' + comment.id)
                         record_comment(comment.id)
                     else:
-                        logging.error('ERROR RETRIEVING ROUTE LINK AND INFO FROM MP. Comment: ' + comment.id +
-                                      '. Body: ' + comment.body)
+                        logging.error('ERROR RETRIEVING ROUTE LINK AND INFO FROM MP. Comment: ' + comment.id
+                                      + '. Body: ' + comment.body)
             else:
                 logging.info('Already visited comment: ' + comment.id + ' ...no reply needed.')
 
@@ -231,8 +231,8 @@ if __name__ == '__main__':
     try:
         if is_bot_running():
             raise Exception('climb_bot is already running!')
-    except:  # TODO fix bare except statement
-        print('climb_bot is already running!')
+    except Exception as e:
+        print(str(e))
         print('Exiting...')
         stop_bot(delete_lockfile=True, exit_code=-1)
 

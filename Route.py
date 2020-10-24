@@ -24,18 +24,13 @@ class Route:
         self.mpsearchurl = mpsearchurl
 
     def __str__(self):
-        return ('Route\n\tName: ' + self.name +
-                '\n\tGrade: ' + self.grade +
-                '\n\tDescription: ' + self.description +
-                '\n\tURL: ' + self.mpurl +
-                '\n\tSearch URL: ' + self.mpsearchurl)
+        return ('Route\n\tName: ' + self.name
+                + '\n\tGrade: ' + self.grade + '\n\tDescription: ' + self.description
+                + '\n\tURL: ' + self.mpurl + '\n\tSearch URL: ' + self.mpsearchurl)
 
     def redditstr(self):
-        return ('[' + self.name + ', ' +
-                self.grade + ', ' +
-                self.description +
-                '](' + self.mpurl +
-                ') (Route on MountainProject.com)')
+        return ('[' + self.name + ', ' + self.grade + ', ' + self.description + ']('
+                + self.mpurl + ') (Route on MountainProject.com)')
 
 
 def findmproute(query):
