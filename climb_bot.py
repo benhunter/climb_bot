@@ -43,7 +43,7 @@ if sys.platform == 'win32':
     configpath = 'C:/projects/climb_bot/config.json'  # where to find the config JSON
     bot_running_file = 'C:/projects/climb_bot/lock.file'
 else:
-    configpath = '/home/infiniterecursive/climb_bot/config.json'  # path on linux server
+    configpath = './config.json'  # path on linux server
     bot_running_file = '/home/infiniterecursive/climb_bot/lock.file'
 
 
