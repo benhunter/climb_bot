@@ -10,7 +10,7 @@ docker run -it --entrypoint /bin/bash climbbot
 
 
 Run a one-liner
-docker run -it --rm --name hellopython --mount type=bind,source=${PWD},destination=/usr/src/myapp -w /usr/src/myapp python:3 "mkdir test"
-docker run -it --rm --name hellopython --mount type=bind,source=${PWD},destination=/usr/src/myapp -w /usr/src/myapp python:3 python -c "print('hello')"
+ - docker run -it --rm --name hellopython --mount type=bind,source=${PWD},destination=/usr/src/myapp -w /usr/src/myapp python:3 "mkdir test"
+ - docker run -it --rm --name hellopython --mount type=bind,source=${PWD},destination=/usr/src/myapp -w /usr/src/myapp python:3 python -c "print('hello')"
 
 
